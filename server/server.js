@@ -2,16 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 import { clerkMiddleware } from '@clerk/express';
-import aiRouter from './routes/aiRoutes.js';
-import userRouter from './routes/userRoute.js';
-import connectCloudinary from './config/cloudinary.js';
+// ... other imports
 
 const app = express();
 
-// Initialize Cloudinary
-connectCloudinary();
-
-// 1. Enhanced CORS Configuration
+// 1. Place CORS at the absolute top of the middleware stack
 app.use(cors({
     origin: 'https://quick-ai-client-sage.vercel.app',
     credentials: true,
@@ -19,11 +14,13 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// 2. Explicitly handle OPTIONS requests
-// This is the "magic fix" for many Vercel CORS issues
-app.options('*', cors());
+// 2. Explicitly handle the "Preflight" OPTIONS request
+// This ensures Vercel sends the headers back before Clerk or other logic runs
+app.options('*', cors()); 
 
 app.use(express.json());
+
+// Move Clerk below CORS so it doesn't interfere with the OPTIONS check
 app.use(clerkMiddleware());
 
 // Routes
