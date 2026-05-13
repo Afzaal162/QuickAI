@@ -8,12 +8,15 @@ import {
 
 const aiRouter = express.Router();
 
-// Initialize Multer
-const upload = multer({ dest: 'uploads/' }); // This creates a 'path' property
+// Use Memory Storage instead of Disk Storage
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 aiRouter.post('/generate-article', auth, generateArticle);
 aiRouter.post('/generate-blog-title', auth, generateBlogTitle);
 aiRouter.post('/generate-image', auth, generateImage);
+
+// Routes handling file uploads
 aiRouter.post('/remove-image-background', upload.single('image'), auth, removeImageBackground);
 aiRouter.post('/remove-image-object', upload.single('image'), auth, removeImageObject);
 aiRouter.post('/review-resume', upload.single('resume'), auth, resumeReview);
