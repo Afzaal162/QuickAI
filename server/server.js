@@ -7,17 +7,30 @@ import userRouter from './routes/userRoute.js';
 import connectCloudinary from './config/cloudinary.js';
 
 const app = express();
-await connectCloudinary();
 
-app.use(cors());
+// Initialize Cloudinary
+connectCloudinary();
+
+// Middleware
+app.use(cors({
+    origin: 'https://quick-ai-client-sage.vercel.app', // Explicitly allow your frontend
+    credentials: true
+}));
 app.use(express.json());
 app.use(clerkMiddleware());
 
+// Routes
 app.get('/', (req, res) => res.send('Server is Live'));
 app.use('/api/ai', aiRouter);
 app.use('/api/user', userRouter);
-const PORT = process.env.PORT || 3000
 
-app.listen(PORT,()=>{
-    console.log('SERVER IS LIVE');
-})
+// Local development support
+if (process.env.NODE_ENV !== 'production') {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`SERVER IS LIVE ON PORT ${PORT}`);
+    });
+}
+
+// Export for Vercel
+export default app;
