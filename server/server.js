@@ -11,11 +11,18 @@ const app = express();
 // Initialize Cloudinary
 connectCloudinary();
 
-// Middleware
+// 1. Enhanced CORS Configuration
 app.use(cors({
-    origin: 'https://quick-ai-client-sage.vercel.app', // Explicitly allow your frontend
-    credentials: true
+    origin: 'https://quick-ai-client-sage.vercel.app',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// 2. Explicitly handle OPTIONS requests
+// This is the "magic fix" for many Vercel CORS issues
+app.options('*', cors());
+
 app.use(express.json());
 app.use(clerkMiddleware());
 
@@ -32,5 +39,4 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 
-// Export for Vercel
 export default app;
