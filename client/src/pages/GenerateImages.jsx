@@ -19,7 +19,7 @@ const GenerateImages = () => {
     try {
       setLoading(true)
       const prompt = `Generate Image of ${input} in the style ${selectedStyle}`
-      const { data } = await axios.post('/api/ai/generate-image', { prompt, publish },
+      const { data } = await axios.post('https://quick-ai-server-7fzzdc43e-afzaal-hassans-projects.vercel.app/api/ai/generate-image', { prompt, publish },
         { headers: { Authorization: `Bearer ${await getToken()}` } }
       )
       if (data.success) {
