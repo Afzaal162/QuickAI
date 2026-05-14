@@ -15,30 +15,36 @@ const RemoveBackground = () => {
   const { getToken } = useAuth();
 
   // 2. Single, clean handler function
-  const onSubmitHandler = async (e) => {
-    e.preventDefault();
-    if (!input) return toast.error("Please select an image first");
+ // Inside your onSubmitHandler in RemoveBackground.jsx
+const onSubmitHandler = async (e) => {
+  e.preventDefault();
+  
+  try {
+    setLoading(true);
 
-    try {
-      setLoading(true)
-      const formData = new FormData();
-      formData.append('image', input)
+    // 1. Fetch the token from Clerk
+    const token = await getToken(); 
 
-      const { data } = await axios.post('/api/ai/remove-image-background', formData, {
-        headers: { Authorization: `Bearer ${await getToken()}` }
-      })
+    const formData = new FormData();
+    formData.append('image', input);
 
-      if (data.success) {
-        setContent(data.content)
-      } else {
-        toast.error(data.message)
+    // 2. Use the FULL URL (Port 3000) and add Headers
+    const { data } = await axios.post('http://localhost:3000/api/ai/remove-image-background', formData, {
+      headers: { 
+        Authorization: `Bearer ${token}`, // Pass the identity token here
+        'Content-Type': 'multipart/form-data' 
       }
-    } catch (error) {
-      toast.error(error.message)
-    } finally {
-      setLoading(false)
+    });
+
+    if (data.success) {
+      setContent(data.content);
     }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setLoading(false);
   }
+};
 
   return (
     <div className='overflow-y-scroll p-6 flex items-start flex-wrap gap-4 text-slate-700'>

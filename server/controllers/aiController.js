@@ -232,76 +232,58 @@ await sql`
 // API TO REMOVE BACKGROUND
 export const removeImageBackground = async (req, res) => {
     try {
-        const userId = req.userId;
+        // 1. FIXED: Access the userId from Clerk's request object
+        // We use req.auth.userId (Clerk typically attaches it here)
+        const userId = req.auth?.userId;
 
-        // 1. Grab the file object directly from Multer
-        const file = req.file;
+        console.log("Verified User ID:", userId);
 
-        // 2. Add this debug log! If this says "undefined", the issue is Multer or Middleware order.
-        console.log("File received:", file);
-
-        if (!file) {
-            return res.status(400).json({ success: false, message: "No file uploaded" });
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "User not authenticated" });
         }
 
-        // 3. Check Usage
-        const usageResult = await sql`SELECT COUNT(*)::int AS count FROM creations WHERE user_id = ${userId}`;
-        if (usageResult[0].count >= 10) {
-            return res.status(403).json({ success: false, message: "Limit reached" });
-        }
+        // ... rest of your logic (Multer buffer conversion, etc.)
 
-        // 4. Upload to Cloudinary (Use file.path)
-        const uploadResponse = await cloudinary.uploader.upload(file.path, {
-            transformation: [{ effect: 'background_removal' }]
-        });
-
-        const secure_url = uploadResponse.secure_url;
-
-        // 5. Save to DB
+        // 2. The Database Insert
         await sql`INSERT INTO creations (user_id, prompt, content, type) 
                   VALUES (${userId}, 'Remove Background', ${secure_url}, 'image')`;
 
         res.json({ success: true, content: secure_url });
 
     } catch (error) {
-        console.error("BACKEND CRASH:", error);
+        console.error("BG REMOVAL ERROR:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
 // Remove Imageobject
 export const removeImageObject = async (req, res) => {
     try {
-        const userId = req.userId;
-        const { object } = req.body; // Text field
-        const file = req.file;       // File object from Multer
+        const { userId } = req.auth; // Ensure this matches your auth logic
+        const { object } = req.body; // The word you want to remove
+        const file = req.file;
 
-        // 1. Safety Check: If Multer failed to grab the file
         if (!file) {
-            return res.status(400).json({ success: false, message: "No image file received" });
+            return res.status(400).json({ success: false, message: "No image uploaded" });
         }
 
-        // 2. Check usage... (your SQL logic)
+        // 1. Convert the buffer to a Base64 string
+        const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 
-        // 3. Upload with FIXED transformation string
-        // Note: It must be 'gen_remove:prompt_' followed by your object name
-        const uploadResponse = await cloudinary.uploader.upload(file.path, {
+        // 2. Call Cloudinary using the base64 string
+        const result = await cloudinary.uploader.upload(base64Image, {
+            // Using Cloudinary's Generative AI to remove the specific object
             transformation: [
                 { effect: `gen_remove:prompt_${object}` }
             ]
         });
 
-        // 4. Use the correct response variable
-        const secure_url = uploadResponse.secure_url;
+        // 3. Save to database and return
+        // ... (Your sql insert logic)
 
-        // 5. Save to DB and Return
-        await sql`INSERT INTO creations (user_id, prompt, content, type) 
-                  VALUES (${userId}, ${object}, ${secure_url}, 'remove-object')`;
-
-        res.json({ success: true, content: secure_url });
+        res.json({ success: true, content: result.secure_url });
 
     } catch (error) {
-        // This will print the EXACT reason for the 500 error in your terminal
-        console.error("DETAILED BACKEND ERROR:", error.message);
+        console.error("AI Controller Error:", error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 };

@@ -22,7 +22,7 @@ const BlogTitles = () => {
 Return ONLY a numbered list. 
 No introduction, no explanations, with ${selectedCategory}. 
 Just the titles.`;
-      const { data } = await axios.post('https://quick-ai-server-7fzzdc43e-afzaal-hassans-projects.vercel.app/api/ai/generate-blog-title', { prompt },
+      const { data } = await axios.post('/api/ai/generate-blog-title', { prompt },
         { headers: { Authorization: `Bearer ${await getToken()}` } }
       )
       if (data.success) {
