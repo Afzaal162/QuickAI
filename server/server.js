@@ -15,6 +15,8 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
+// Add this right after your cors configuration
+app.options('*', cors());
 app.use(express.json());
 app.use(clerkMiddleware());
 
