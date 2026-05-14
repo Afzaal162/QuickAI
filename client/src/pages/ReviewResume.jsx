@@ -21,9 +21,12 @@ const ReviewResume = () => {
       setLoading(true)     
       const formData = new FormData();
       formData.append('resume', input)
-      const { data } = await axios.post('/api/ai/review-resume', formData, {
-        headers: { Authorization: `Bearer ${await getToken()}` }
-      })
+     const { data } = await axios.post('/api/ai/review-resume', formData, {
+  headers: { 
+    Authorization: `Bearer ${await getToken()}`,
+    'Content-Type': 'multipart/form-data' // Required for files
+  }
+});
       if (data.success) {
         setContent(data.content)
       } else {

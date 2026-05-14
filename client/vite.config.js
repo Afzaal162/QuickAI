@@ -11,7 +11,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://quick-ai-server-git-main-afzaal-hassans-projects.vercel.app', // or your backend port
+        target: 'http://localhost:3000', // or your backend port
         changeOrigin: true,
         timeout: 60000, // 60 seconds
         proxyTimeout: 60000,

@@ -4,6 +4,7 @@ import axios from 'axios'
 import { v2 as cloudinary } from 'cloudinary'
 import fs from 'node:fs';
 import pdfParser from 'pdf-parse-fork';
+import { getAuth } from '@clerk/express';
 const AI = new OpenAI({
     apiKey: process.env.GEMINI_API_KEY,
     baseURL: "https://generativelanguage.googleapis.com/v1beta/openai"
@@ -232,19 +233,29 @@ await sql`
 // API TO REMOVE BACKGROUND
 export const removeImageBackground = async (req, res) => {
     try {
-        // 1. FIXED: Access the userId from Clerk's request object
-        // We use req.auth.userId (Clerk typically attaches it here)
-        const userId = req.auth?.userId;
-
-        console.log("Verified User ID:", userId);
-
+        const { userId } = getAuth(req);
         if (!userId) {
             return res.status(401).json({ success: false, message: "User not authenticated" });
         }
 
-        // ... rest of your logic (Multer buffer conversion, etc.)
+        // 1. Check if the file exists (Multer puts it in req.file)
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: "No image uploaded" });
+        }
 
-        // 2. The Database Insert
+        // 2. Convert buffer to Base64 so Cloudinary can read it
+        const base64Image = Buffer.from(req.file.buffer).toString('base64');
+        const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
+
+        // 3. Upload to Cloudinary
+        // (Make sure you've imported 'cloudinary' at the top of your file!)
+        const uploadResponse = await cloudinary.uploader.upload(dataURI, {
+            folder: 'creations',
+        });
+
+        const secure_url = uploadResponse.secure_url; 
+
+        // 4. Insert into Database
         await sql`INSERT INTO creations (user_id, prompt, content, type) 
                   VALUES (${userId}, 'Remove Background', ${secure_url}, 'image')`;
 
@@ -287,89 +298,50 @@ export const removeImageObject = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
-
-
 export const resumeReview = async (req, res) => {
     try {
-        const userId = req.userId;
+        const { userId } = getAuth(req);
         const resumeFile = req.file;
 
-        // 1. Validate File Upload
-        if (!resumeFile) {
-            return res.status(400).json({ success: false, message: "No resume file uploaded." });
+        if (!resumeFile) return res.json({ success: false, message: "No file" });
+
+        // --- RE-ADD YOUR EXTRACTION LOGIC HERE ---
+        const dataBuffer = resumeFile.buffer;
+        const pdfData = await pdfParser(dataBuffer);
+        const extractedText = pdfData.text;
+
+        console.log("--- STARTING AI CALL ---");
+        console.log("Text Length:", extractedText?.length);
+
+        if (!extractedText || extractedText.length < 10) {
+            return res.json({ success: false, message: "Could not read PDF" });
         }
 
-        // 2. Check Usage Limit
-        const usageResult = await sql`
-            SELECT COUNT(*)::int AS count
-            FROM creations
-            WHERE user_id = ${userId}
-        `;
-
-        if (usageResult[0].count >= 10) {
-            return res.status(403).json({ success: false, message: "Free limit reached." });
-        }
-
-        // 3. Extract Text from PDF
-        const dataBuffer = fs.readFileSync(resumeFile.path);
-        let extractedText = "";
-
-        // Determine which parser function to use
-        const parser = (typeof pdfParser === 'function') ? pdfParser : pdfParser.default;
-
-        if (typeof parser === 'function') {
-            const pdfData = await parser(dataBuffer);
-            extractedText = pdfData.text;
-        } else {
-            // "Emergency" fallback: force a require if the import is being difficult
-            const { createRequire } = await import('module');
-            const require = createRequire(import.meta.url);
-            const altParser = require('pdf-parse');
-            const pdfData = await altParser(dataBuffer);
-            extractedText = pdfData.text;
-        }
-
-        // 4. Validate Extracted Content
-        if (!extractedText || extractedText.trim().length < 50) {
-            return res.status(400).json({
-                success: false,
-                message: "Could not extract enough text from the PDF. Please ensure it's not a scanned image."
-            });
-        }
-
-        // 5. AI Generation
+        // --- MATCH THE ARTICLE MODULE EXACTLY ---
         const response = await AI.chat.completions.create({
-            model: "gemini-3-flash-preview",
+            model: "gemini-3-flash-preview", // Use the EXACT string from your Article module
             messages: [
                 {
-                    role: "system",
-                    content: "You are an expert HR manager. Provide a detailed review of the following resume text, highlighting strengths, weaknesses, and specific areas for improvement."
-                },
-                { role: "user", content: extractedText }
+                    role: "user",
+                    content: `Review this resume and provide feedback: ${extractedText}`
+                }
             ],
             temperature: 0.7,
-            max_tokens: 2000
         });
 
         const content = response?.choices?.[0]?.message?.content || "";
 
-        // 6. Save Record to Database
-        await sql`
-            INSERT INTO creations (user_id, prompt, content, type) 
-            VALUES (${userId}, 'Resume Review Analysis', ${content}, 'resume-review')
-        `;
+        // Save to DB
+        // Make sure this matches the columns your database expects
+await sql`
+    INSERT INTO creations (user_id, prompt, content, type) 
+    VALUES (${userId}, 'Resume Review Analysis', ${content}, 'resume-review')
+`;
 
-        // 7. Final Success Response
-        res.json({
-            success: true,
-            content
-        });
+        res.json({ success: true, content });
 
     } catch (error) {
-        console.error("RESUME REVIEW CRASH:", error);
-        res.status(500).json({
-            success: false,
-            message: error.message || "An internal error occurred during the review."
-        });
+        console.log("RESUME ERROR:", error.message);
+        res.json({ success: false, message: error.message });
     }
 };

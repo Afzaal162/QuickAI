@@ -22,25 +22,34 @@ const onSubmitHandler = async (e) => {
   try {
     setLoading(true);
 
-    // 1. Fetch the token from Clerk
+    // 1. Fetch the token
     const token = await getToken(); 
+
+    // --- DEBUG LOGS ---
+    console.log("--- CLERK AUTH DEBUG ---");
+    console.log("Token Value:", token); 
+    console.log("Token Type:", typeof token);
+    console.log("Base URL:", import.meta.env.VITE_BASE_URL);
+    // ------------------
+
+    if (!token) {
+      console.error("TOKEN IS MISSING! Are you signed in?");
+      return;
+    }
 
     const formData = new FormData();
     formData.append('image', input);
 
-    // 2. Use the FULL URL (Port 3000) and add Headers
     const { data } = await axios.post('http://localhost:3000/api/ai/remove-image-background', formData, {
-      headers: { 
-        Authorization: `Bearer ${token}`, // Pass the identity token here
-        'Content-Type': 'multipart/form-data' 
-      }
-    });
+        headers: { Authorization: `Bearer ${await getToken()}` }
+      })
 
     if (data.success) {
       setContent(data.content);
     }
   } catch (error) {
-    console.error(error);
+    // Log the full error to see the backend's response message
+    console.error("AXIOS ERROR:", error.response?.data || error.message);
   } finally {
     setLoading(false);
   }
