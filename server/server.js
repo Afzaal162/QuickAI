@@ -2,9 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 import { clerkMiddleware } from '@clerk/express';
-import aiRouter from './routes/aiRoutes.js';
-import userRouter from './routes/userRoute.js';
-import connectCloudinary from './config/cloudinary.js';
+import aiRouter from '../server/routes/aiRoutes.js'
+import userRouter from './routes/userRoute.js'
+import connectCloudinary from './config/cloudinary.js'
 
 const app = express();
 
@@ -28,8 +28,7 @@ app.use(cors({
  * THE FIX: Updated the wildcard from '*' to '(.*)'.
  * New Express/Path-to-Regexp versions crash on '*' because it lacks a parameter name.
  */
-app.options('(.*)', cors());
-
+app.options(/^(.*)$/, cors());
 // 2. Middleware
 app.use(express.json());
 
