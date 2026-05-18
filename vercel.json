@@ -2,17 +2,17 @@
   "version": 2,
   "builds": [
     {
-      "src": "server.js",
+      "src": "server/index.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["server/routes/**", "server/controllers/**", "server/middleware/**"]
+        "includeFiles": ["server/**"]
       }
     }
   ],
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "server.js"
+      "destination": "server/index.js"
     },
     {
       "source": "/(.*)",
