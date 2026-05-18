@@ -11,27 +11,27 @@ const app = express();
 // 1. Setup CORS
 const allowedOrigins = [
     'https://quick-ai-client-sage.vercel.app', 
-    'http://localhost:5173' // Add your local Vite port here
+    'http://localhost:5173'
 ];
 
 app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps, curl, or internal serverless hops)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
+            console.warn(`Blocked by CORS: ${origin}`);
             callback(new Error('Not allowed by CORS'));
         }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
-/** 
- * THE CRITICAL FIX: 
- * We use a Regex /^(.*)$/ because it's universal. 
- * This avoids the "PathError: Missing parameter name" crash.
- */
+// Process explicit preflight pre-routing options across all endpoints cleanly
 app.options(/^(.*)$/, cors());
 
 app.use(express.json());
@@ -46,8 +46,15 @@ app.get('/', (req, res) => res.send('Server is Live'));
 app.use('/api/ai', aiRouter);
 app.use('/api/user', userRouter);
 
+// Global Error Handler to catch and prevent crash loops
+app.use((err, req, res, next) => {
+    if (err.message === 'Not allowed by CORS') {
+        return res.status(403).json({ error: 'CORS policy restriction' });
+    }
+    res.status(500).json({ error: err.message || 'Internal Server Error' });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
-console.log("Checking Env Variables:");
-console.log("Clerk Secret:", process.env.CLERK_SECRET_KEY ? "Found" : "Missing");
-console.log("Database URL:", process.env.DATABASE_URL ? "Found" : "Missing");
+
+export default app;
