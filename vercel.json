@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "server/index.js",
+      "src": "server.js",
       "use": "@vercel/node",
       "config": {
         "includeFiles": ["server/routes/**", "server/controllers/**", "server/middleware/**"]
@@ -12,7 +12,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "server/index.js"
+      "destination": "server.js"
     },
     {
       "source": "/(.*)",
