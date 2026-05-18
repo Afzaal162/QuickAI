@@ -5,11 +5,8 @@ import CreationItem from '../components/CreationItem'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
-axios.defaults.baseURL = import.meta.env.DEV 
-  ? 'http://localhost:3000' 
-  : 'https://quick-ai-server-7fzzdc43e-afzaal-hassans-projects.vercel.app';
+axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
 
-axios.defaults.withCredentials = true;
 const Dashboard = () => {
   const [creations, setCreations] = useState([]);
   const [loading, setLoading] = useState(true);
