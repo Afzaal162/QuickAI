@@ -5,18 +5,23 @@
       "src": "server.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["routes/**", "controllers/**", "middleware/**", "config/**"]
+        "includeFiles": [
+          "routes/**", 
+          "controllers/**", 
+          "middleware/**", 
+          "config/**"
+        ]
       }
     }
   ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "server.js"
+      "source": "/api/:path*",
+      "destination": "/server.js"
     },
     {
-      "source": "/((?!api).*)" ,
-      "destination": "/"
+      "source": "/(.*)",
+      "destination": "/server.js"
     }
   ]
 }
