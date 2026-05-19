@@ -1,27 +1,27 @@
 import { createClerkClient } from "@clerk/backend";
-import { getAuth } from "@clerk/express";
 
-// Clerk client (make sure CLERK_SECRET_KEY is correct)
+// Clerk client (Ensure CLERK_SECRET_KEY is present in your Vercel Project Settings)
 const clerkClient = createClerkClient({
     secretKey: process.env.CLERK_SECRET_KEY,
 });
 
 export const auth = async (req, res, next) => {
     try {
-        // 1. Safely extract auth
-        const authData = getAuth(req);
-        console.log("AUTH DEBUG:", authData);
+        // 1. 👇 FIX: Read directly from req.auth populated by global clerkMiddleware()
+        const authData = req.auth;
+        console.log("AUTH DEBUG STATE:", authData);
 
-        if (!authData?.userId) {
+        // Check if the global middleware successfully validated the token session
+        if (!authData || !authData.userId) {
             return res.status(401).json({
                 success: false,
-                message: "Unauthorized"
+                message: "Unauthorized: Invalid or missing session token"
             });
         }
 
         const userId = authData.userId;
 
-        // 2. Fetch user from Clerk
+        // 2. Fetch user details from Clerk backend to pull up metadata values
         const user = await clerkClient.users.getUser(userId);
 
         if (!user) {
@@ -33,11 +33,10 @@ export const auth = async (req, res, next) => {
 
         // 3. Normalize metadata safely
         const metadata = user.privateMetadata || {};
-
         const freeUsage = Number(metadata.free_usage ?? 0);
         const plan = metadata.plan || "free";
 
-        // 4. Enforce limit (server-side protection)
+        // 4. Enforce credit usage limits
         if (plan !== "premium" && freeUsage >= 10) {
             return res.status(403).json({
                 success: false,
@@ -45,7 +44,7 @@ export const auth = async (req, res, next) => {
             });
         }
 
-        // 5. Attach to request (single source of truth)
+        // 5. Attach payload attributes safely onto the request pipeline
         req.userId = userId;
         req.plan = plan;
         req.free_usage = freeUsage;
@@ -54,11 +53,10 @@ export const auth = async (req, res, next) => {
         next();
 
     } catch (error) {
-        console.error("AUTH ERROR:", error.message);
-
+        console.error("AUTH INTERCEPT ERROR:", error.message);
         return res.status(500).json({
             success: false,
-            message: "Authentication failed"
+            message: "Authentication processing failed"
         });
     }
 };
