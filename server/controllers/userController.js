@@ -2,14 +2,29 @@ import sql from '../config/db.js'
 
 export const getUserCreation = async (req, res) => {
     try {
-        const { userId } = req.auth();
+        // 👇 FIX: Remove the function parentheses () -> req.auth is an object!
+        const { userId } = req.auth; 
+
+        // If the token parsing was clean but no user context exists, bounce safely
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Unauthorized: No user session found" });
+        }
+
+        // Run your neon/pg-sql database query using the verified clerk userId string
         const creations = await sql`SELECT * FROM creations WHERE user_id = ${userId} ORDER BY created_at DESC`;
         
-        // Change 'message' to 'creations' to match your frontend state logic
-        res.json({ success: true, creations: creations }); 
+        // Return a successful 200 status alongside the database rows
+        return res.status(200).json({ 
+            success: true, 
+            creations: creations 
+        }); 
 
     } catch (error) {
-        res.json({ success: false, message: error.message });
+        console.error("Database Controller Error:", error.message);
+        return res.status(500).json({ 
+            success: false, 
+            message: error.message 
+        });
     }
 }
 export const getPublishedCreation = async (req, res) => {
