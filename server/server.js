@@ -32,8 +32,7 @@ app.use(cors({
 }));
 
 // Process explicit preflight pre-routing options across all endpoints cleanly
-app.options(/^(.*)$/, cors());
-
+app.options(/.*/, cors());
 app.use(express.json());
 
 // Initialize services (background)
