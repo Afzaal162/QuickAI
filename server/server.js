@@ -8,15 +8,16 @@ import connectCloudinary from './config/cloudinary.js';
 
 const app = express();
 
-// 1. Setup CORS
+// 1. Define allowed origins clearly
 const allowedOrigins = [
     'https://quick-ai-client-sage.vercel.app', 
     'http://localhost:5173'
 ];
 
+// 2. Configure Dynamic CORS Middleware
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps, curl, or internal serverless hops)
+        // Allow requests with no origin (like mobile apps, postman, or internal cluster hops)
         if (!origin) return callback(null, true);
         
         if (allowedOrigins.indexOf(origin) !== -1) {
@@ -31,21 +32,33 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
-// Process explicit preflight pre-routing options across all endpoints cleanly
-app.options(/.*/, cors());
+// 3. Fix: Handle all Preflight OPTIONS cleanly without conflicting middleware lines
+app.options(/.*/, (req, res) => {
+    const origin = req.headers.origin;
+    // Dynamic origin matching for safety
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+    }
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept");
+    return res.sendStatus(200);
+});
+
 app.use(express.json());
 
-// Initialize services (background)
+// Initialize services in background safely
 connectCloudinary().catch(err => console.error("Cloudinary Error:", err));
 
+// Clerk interceptor catches incoming tokens
 app.use(clerkMiddleware());
 
-// 2. Routes
+// 4. Application Routes
 app.get('/', (req, res) => res.send('Server is Live'));
 app.use('/api/ai', aiRouter);
 app.use('/api/user', userRouter);
 
-// Global Error Handler to catch and prevent crash loops
+// Global Error Handler
 app.use((err, req, res, next) => {
     if (err.message === 'Not allowed by CORS') {
         return res.status(403).json({ error: 'CORS policy restriction' });
