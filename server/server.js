@@ -8,7 +8,7 @@ import connectCloudinary from './config/cloudinary.js';
 
 const app = express();
 
-// 1. Define allowed origins clearly
+// 1. Define allowed origins clearly (for local and production main domain)
 const allowedOrigins = [
     'https://quick-ai-client-sage.vercel.app', 
     'http://localhost:5173'
@@ -20,7 +20,11 @@ app.use(cors({
         // Allow requests with no origin (like mobile apps, postman, or internal cluster hops)
         if (!origin) return callback(null, true);
         
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        // Match explicit list OR any dynamic Vercel preview/branch deployments
+        const isAllowedExplicitly = allowedOrigins.indexOf(origin) !== -1;
+        const isVercelSubdomain = origin.endsWith('.vercel.app');
+
+        if (isAllowedExplicitly || isVercelSubdomain) {
             callback(null, true);
         } else {
             console.warn(`Blocked by CORS: ${origin}`);
@@ -32,11 +36,12 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
-// 3. Fix: Handle all Preflight OPTIONS cleanly without conflicting middleware lines
+// 3. Handle all Preflight OPTIONS cleanly
 app.options(/.*/, (req, res) => {
     const origin = req.headers.origin;
-    // Dynamic origin matching for safety
-    if (allowedOrigins.includes(origin)) {
+    
+    // Dynamic matching for preflight checks to keep Vercel subdomains working smoothly
+    if (allowedOrigins.includes(origin) || (origin && origin.endsWith('.vercel.app'))) {
         res.setHeader("Access-Control-Allow-Origin", origin);
     }
     res.setHeader("Access-Control-Allow-Credentials", "true");
