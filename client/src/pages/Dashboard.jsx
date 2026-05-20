@@ -27,7 +27,8 @@ const Dashboard = () => {
 
       // 2. ⚡️ BRUTE FORCE THE FULL PATH HERE (Notice the backticks `` and API_BASE_URL)
       //  RIGHT (Using backticks `` allows the variable to unpack properly):
-const { data } = await axios.get(`${API_BASE_URL}/api/user/get-user-creation`, {
+// Direct hardcoded string — zero configurations or variables required!
+const { data } = await axios.get('https://quick-ai-server-7fzzdc43e-afzaal-hassans-projects.vercel.app/api/user/get-user-creation', {
   headers: { Authorization: `Bearer ${token}` }
 });
 
