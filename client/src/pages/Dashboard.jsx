@@ -26,9 +26,10 @@ const Dashboard = () => {
       }
 
       // 2. ⚡️ BRUTE FORCE THE FULL PATH HERE (Notice the backticks `` and API_BASE_URL)
-      const { data } = await axios.get(`${API_BASE_URL}/api/user/get-user-creation`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      //  RIGHT (Using backticks `` allows the variable to unpack properly):
+const { data } = await axios.get(`${API_BASE_URL}/api/user/get-user-creation`, {
+  headers: { Authorization: `Bearer ${token}` }
+});
 
       if (data.success) {
         setCreations(data.creations || []); 
