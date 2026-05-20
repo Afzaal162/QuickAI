@@ -11,8 +11,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        // Updated from localhost to your live Vercel backend server URL
-        target: 'https://quick-ai-server-7fzzdc43e-afzaal-hassans-projects.vercel.app', 
+        target: 'http://localhost:3000', // or your backend port
         changeOrigin: true,
         timeout: 60000, // 60 seconds
         proxyTimeout: 60000,
