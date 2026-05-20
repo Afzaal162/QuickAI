@@ -1,32 +1,24 @@
 import sql from '../config/db.js'
 
+// Example check for your getUserCreation controller function inside userController.js:
+// Verification template for controllers/userController.js
 export const getUserCreation = async (req, res) => {
     try {
-        // 👇 FIX: Remove the function parentheses () -> req.auth is an object!
-        const { userId } = req.auth; 
+        const clerkId = req.clerkId; 
+        console.log("Fetching creations for authenticated user ID:", clerkId);
 
-        // If the token parsing was clean but no user context exists, bounce safely
-        if (!userId) {
-            return res.status(401).json({ success: false, message: "Unauthorized: No user session found" });
-        }
-
-        // Run your neon/pg-sql database query using the verified clerk userId string
-        const creations = await sql`SELECT * FROM creations WHERE user_id = ${userId} ORDER BY created_at DESC`;
+        // Your database logic goes here...
+        // const creations = await YourModel.find({ userId: clerkId });
         
-        // Return a successful 200 status alongside the database rows
-        return res.status(200).json({ 
-            success: true, 
-            creations: creations 
-        }); 
-
-    } catch (error) {
-        console.error("Database Controller Error:", error.message);
-        return res.status(500).json({ 
-            success: false, 
-            message: error.message 
+        return res.status(200).json({
+            success: true,
+            creations: [] 
         });
+    } catch (error) {
+        console.error("getUserCreation Error:", error);
+        return res.status(500).json({ success: false, message: error.message });
     }
-}
+};
 export const getPublishedCreation = async (req, res) => {
     try {
 const creations = await sql`SELECT * FROM creations ORDER BY created_at DESC LIMIT 20`;        

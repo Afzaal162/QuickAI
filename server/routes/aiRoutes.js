@@ -17,9 +17,9 @@ aiRouter.post('/generate-article', auth, generateArticle);
 aiRouter.post('/generate-blog-title', auth, generateBlogTitle);
 aiRouter.post('/generate-image', auth, generateImage);
 
-// File Upload Routes - FIXED: Added 'auth' to background removal
-aiRouter.post('/remove-image-background', upload.single('image'), auth, removeImageBackground);
-aiRouter.post('/remove-image-object', upload.single('image'), auth, removeImageObject);
-aiRouter.post('/review-resume', upload.single('resume'), auth, resumeReview);
+// ⚡️ FIXED: Move 'auth' BEFORE 'upload.single' so the user is authenticated first!
+aiRouter.post('/remove-image-background', auth, upload.single('image'), removeImageBackground);
+aiRouter.post('/remove-image-object', auth, upload.single('image'), removeImageObject);
+aiRouter.post('/review-resume', auth, upload.single('resume'), resumeReview);
 
 export default aiRouter;

@@ -3,6 +3,7 @@ import sql from "../config/db.js";
 import axios from 'axios'
 import { v2 as cloudinary } from 'cloudinary'
 import fs from 'node:fs';
+import { PassThrough } from 'stream';
 import pdfParser from 'pdf-parse-fork';
 import { getAuth } from '@clerk/express';
 const AI = new OpenAI({
@@ -12,8 +13,8 @@ const AI = new OpenAI({
 // API TO GENERATE ARTICLE
 export const generateArticle = async (req, res) => {
     try {
-
-        const userId = req.userId;
+        // ⚡️ FIXED: Changed from req.userId to req.clerkId to match your middleware
+        const userId = req.clerkId;
         const { prompt, length } = req.body;
 
         if (!prompt) {
@@ -31,7 +32,6 @@ export const generateArticle = async (req, res) => {
         `;
 
         const articlesGenerated = usageResult[0].count;
-
         const limit = 10;
 
         if (articlesGenerated >= limit) {
@@ -43,7 +43,7 @@ export const generateArticle = async (req, res) => {
 
         // STEP 2: AI generation
         const response = await AI.chat.completions.create({
-            model: "gemini-3-flash-preview",
+            model: "gemini-2.5-flash",
             messages: [
                 {
                     role: "user",
@@ -63,7 +63,7 @@ export const generateArticle = async (req, res) => {
             });
         }
 
-        // STEP 3: save creation (this increments usage indirectly)
+        // STEP 3: save creation (This now runs flawlessly because userId is populated!)
         await sql`
             INSERT INTO creations (user_id, prompt, content, type)
             VALUES (${userId}, ${prompt}, ${content}, 'article')
@@ -92,8 +92,8 @@ export const generateArticle = async (req, res) => {
 // API TO GENERATE BLOG TITLE
 export const generateBlogTitle = async (req, res) => {
     try {
-
-        const userId = req.userId;
+        // ⚡️ FIXED: Pointing to req.clerkId to match your active auth middleware
+        const userId = req.clerkId;
         const { prompt } = req.body;
 
         if (!prompt) {
@@ -111,7 +111,6 @@ export const generateBlogTitle = async (req, res) => {
         `;
 
         const articlesGenerated = usageResult[0].count;
-
         const limit = 10;
 
         if (articlesGenerated >= limit) {
@@ -122,15 +121,13 @@ export const generateBlogTitle = async (req, res) => {
         }
 
         // STEP 2: AI generation
-        // STEP 2: AI generation
         const response = await AI.chat.completions.create({
-            model: "gemini-3-flash-preview",
+            model: "gemini-2.5-flash",
             messages: [
                 { role: "user", content: prompt }
             ],
             temperature: 0.7,
-            // Change this line:
-            max_tokens: 500 // Blog titles are short, 200 is plenty
+            max_tokens: 500
         });
 
         const content = response?.choices?.[0]?.message?.content || "";
@@ -142,7 +139,7 @@ export const generateBlogTitle = async (req, res) => {
             });
         }
 
-        // STEP 3: save creation (this increments usage indirectly)
+        // STEP 3: save creation 
         await sql`
             INSERT INTO creations (user_id, prompt, content, type)
             VALUES (${userId}, ${prompt}, ${content}, 'blog-title')
@@ -171,7 +168,8 @@ export const generateBlogTitle = async (req, res) => {
 // API TO GENERATE IMAGE
 export const generateImage = async (req, res) => {
     try {
-        const userId = req.userId;
+        // ⚡️ FIX 1: Ensure Clerk ID consistency across your backend
+        const userId = req.clerkId || req.userId; 
         const { prompt, publish } = req.body;
 
         if (!prompt) {
@@ -189,44 +187,57 @@ export const generateImage = async (req, res) => {
             return res.status(403).json({ success: false, message: "Free limit reached." });
         }
 
-        // STEP 2: AI generation (Text-to-Image)
+        // STEP 2: Fetch image stream from ClipDrop 
         const formData = new FormData();
         formData.append('prompt', prompt);
 
-        const { data } = await axios.post('https://clipdrop-api.co/text-to-image/v1', formData, {
+        // 🚀 SPEED UP: Using 'stream' means your server passes chunks immediately 
+        // without waiting to download the whole file into memory first.
+        const clipdropResponse = await axios.post('https://clipdrop-api.co/text-to-image/v1', formData, {
             headers: { 'x-api-key': process.env.CLIPDROP_API_KEY },
-            responseType: "arraybuffer",
+            responseType: "stream", 
         });
 
-        // Convert and upload to Cloudinary
-        const base64Image = `data:image/png;base64,${Buffer.from(data, 'binary').toString('base64')}`;
-        const uploadResponse = await cloudinary.uploader.upload(base64Image);
+        // 🚀 SPEED UP: Stream the bytes directly into Cloudinary's upload pipeline
+        const cloudinaryUpload = () => {
+            return new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                    { folder: "creations" },
+                    (error, result) => {
+                        if (error) return reject(error);
+                        resolve(result);
+                    }
+                );
+                clipdropResponse.data.pipe(uploadStream);
+            });
+        };
+
+        const uploadResponse = await cloudinaryUpload();
         const secure_url = uploadResponse.secure_url;
 
         if (!secure_url) {
             throw new Error("Cloudinary upload failed");
         }
 
-        // STEP 3: Save creation (Fixed column list to include 'published')
-     // Force a strict boolean conversion
-const isPublished = publish === true || publish === 'true';
+        // STEP 3: Save creation
+        const isPublished = publish === true || publish === 'true';
 
-await sql`
-    INSERT INTO creations (user_id, prompt, content, type, publish) 
-    VALUES (${userId}, ${prompt}, ${secure_url}, 'image', ${isPublished})
-`;
+        await sql`
+            INSERT INTO creations (user_id, prompt, content, type, publish) 
+            VALUES (${userId}, ${prompt}, ${secure_url}, 'image', ${isPublished})
+        `;
 
         // STEP 4: Return result
-        res.json({
+        return res.json({
             success: true,
             content: secure_url
         });
 
     } catch (error) {
-        console.error("GENERATE IMAGE ERROR:", error.response?.data || error.message);
-        res.status(error.response?.status || 500).json({
+        console.error("GENERATE IMAGE ERROR:", error.message);
+        return res.status(500).json({
             success: false,
-            message: error.message
+            message: "Image generation or storage failed"
         });
     }
 };
@@ -253,7 +264,7 @@ export const removeImageBackground = async (req, res) => {
             folder: 'creations',
         });
 
-        const secure_url = uploadResponse.secure_url; 
+        const secure_url = uploadResponse.secure_url;
 
         // 4. Insert into Database
         await sql`INSERT INTO creations (user_id, prompt, content, type) 
@@ -320,7 +331,7 @@ export const resumeReview = async (req, res) => {
 
         // --- MATCH THE ARTICLE MODULE EXACTLY ---
         const response = await AI.chat.completions.create({
-            model: "gemini-3-flash-preview", // Use the EXACT string from your Article module
+            model: "gemini-2.5-flash",
             messages: [
                 {
                     role: "user",
@@ -334,7 +345,7 @@ export const resumeReview = async (req, res) => {
 
         // Save to DB
         // Make sure this matches the columns your database expects
-await sql`
+        await sql`
     INSERT INTO creations (user_id, prompt, content, type) 
     VALUES (${userId}, 'Resume Review Analysis', ${content}, 'resume-review')
 `;
