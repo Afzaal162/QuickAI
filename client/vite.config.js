@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': {
           // Fallback to localhost during local dev if VITE_BASE_URL isn't set locally
-          target: env.VITE_BASE_URL || 'http://localhost:3000', 
+          target: env.VITE_BASE_URL || 'https://quick-ai-server-7fzzdc43e-afzaal-hassans-projects.vercel.app', 
           changeOrigin: true,
           timeout: 60000,
           proxyTimeout: 60000,
