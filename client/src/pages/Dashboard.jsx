@@ -5,17 +5,15 @@ import CreationItem from '../components/CreationItem';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-// This tells the browser: Use the Vercel variable, but if it's missing, use the live server link!
-axios.defaults.baseURL = import.meta.env.VITE_BASE_URL || 'https://quick-ai-server-7fzzdc43e-afzaal-hassans-projects.vercel.app';
+// 1. Establish a clear, plain constant string variable for your base API target
+const API_BASE_URL = import.meta.env.VITE_BASE_URL || 'https://quick-ai-server-7fzzdc43e-afzaal-hassans-projects.vercel.app';
+
 const Dashboard = () => {
   const [creations, setCreations] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // 👇 ADD 'isLoaded' here to check if Clerk is done initializing!
   const { getToken, isLoaded, isSignedIn } = useAuth();
 
   const getDashboardData = async () => {
-    // If Clerk isn't ready yet, don't execute or drop the loading spinner
     if (!isLoaded) return; 
 
     setLoading(true);
@@ -27,7 +25,8 @@ const Dashboard = () => {
         return; 
       }
 
-      const { data } = await axios.get('/api/user/get-user-creation', {
+      // 2. ⚡️ BRUTE FORCE THE FULL PATH HERE (Notice the backticks `` and API_BASE_URL)
+      const { data } = await axios.get(`${API_BASE_URL}/api/user/get-user-creation`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -43,6 +42,8 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
+
+  // ... (rest of your file stays exactly the same!)
 
   // 👇 Trigger the fetch as soon as Clerk is completely ready and the user is verified
   useEffect(() => {
