@@ -6,15 +6,18 @@ import fs from 'node:fs';
 import { PassThrough } from 'stream';
 import pdfParser from 'pdf-parse-fork';
 import { getAuth } from '@clerk/express';
+
+// ⚡️ FIXED: Correct baseURL configuration format for Gemini's OpenAI Compatibility Layer
 const AI = new OpenAI({
     apiKey: process.env.GEMINI_API_KEY,
-    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai"
+    baseURL: "https://generativelanguage.googleapis.com/v1beta/"
 });
+
 // API TO GENERATE ARTICLE
 export const generateArticle = async (req, res) => {
     try {
-        // ⚡️ FIXED: Changed from req.userId to req.clerkId to match your middleware
-        const userId = req.clerkId;
+        // ⚡️ SAFEGUARD: Fallback to req.userId or clerk's getAuth if middleware properties shift
+        const userId = req.clerkId || req.userId || getAuth(req).userId;
         const { prompt, length } = req.body;
 
         if (!prompt) {
@@ -51,7 +54,7 @@ export const generateArticle = async (req, res) => {
                 }
             ],
             temperature: 0.7,
-            max_tokens: Math.min((length || 800) * 2, 4000)
+            max_tokens: Math.min((Number(length) || 800) * 2, 4000)
         });
 
         const content = response?.choices?.[0]?.message?.content || "";
@@ -63,7 +66,7 @@ export const generateArticle = async (req, res) => {
             });
         }
 
-        // STEP 3: save creation (This now runs flawlessly because userId is populated!)
+        // STEP 3: save creation
         await sql`
             INSERT INTO creations (user_id, prompt, content, type)
             VALUES (${userId}, ${prompt}, ${content}, 'article')
@@ -82,18 +85,17 @@ export const generateArticle = async (req, res) => {
 
     } catch (error) {
         console.log("ERROR:", error.message);
-
         res.json({
             success: false,
             message: error.message
         });
     }
 };
+
 // API TO GENERATE BLOG TITLE
 export const generateBlogTitle = async (req, res) => {
     try {
-        // ⚡️ FIXED: Pointing to req.clerkId to match your active auth middleware
-        const userId = req.clerkId;
+        const userId = req.clerkId || req.userId || getAuth(req).userId;
         const { prompt } = req.body;
 
         if (!prompt) {
@@ -158,18 +160,17 @@ export const generateBlogTitle = async (req, res) => {
 
     } catch (error) {
         console.log("ERROR:", error.message);
-
         res.json({
             success: false,
             message: error.message
         });
     }
 };
+
 // API TO GENERATE IMAGE
 export const generateImage = async (req, res) => {
     try {
-        // ⚡️ FIX 1: Ensure Clerk ID consistency across your backend
-        const userId = req.clerkId || req.userId; 
+        const userId = req.clerkId || req.userId || getAuth(req).userId; 
         const { prompt, publish } = req.body;
 
         if (!prompt) {
@@ -191,14 +192,12 @@ export const generateImage = async (req, res) => {
         const formData = new FormData();
         formData.append('prompt', prompt);
 
-        // 🚀 SPEED UP: Using 'stream' means your server passes chunks immediately 
-        // without waiting to download the whole file into memory first.
         const clipdropResponse = await axios.post('https://clipdrop-api.co/text-to-image/v1', formData, {
             headers: { 'x-api-key': process.env.CLIPDROP_API_KEY },
             responseType: "stream", 
         });
 
-        // 🚀 SPEED UP: Stream the bytes directly into Cloudinary's upload pipeline
+        // Stream the bytes directly into Cloudinary's upload pipeline
         const cloudinaryUpload = () => {
             return new Promise((resolve, reject) => {
                 const uploadStream = cloudinary.uploader.upload_stream(
@@ -241,32 +240,28 @@ export const generateImage = async (req, res) => {
         });
     }
 };
+
 // API TO REMOVE BACKGROUND
 export const removeImageBackground = async (req, res) => {
     try {
-        const { userId } = getAuth(req);
+        const userId = req.clerkId || req.userId || getAuth(req).userId;
         if (!userId) {
             return res.status(401).json({ success: false, message: "User not authenticated" });
         }
 
-        // 1. Check if the file exists (Multer puts it in req.file)
         if (!req.file) {
             return res.status(400).json({ success: false, message: "No image uploaded" });
         }
 
-        // 2. Convert buffer to Base64 so Cloudinary can read it
         const base64Image = Buffer.from(req.file.buffer).toString('base64');
         const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
 
-        // 3. Upload to Cloudinary
-        // (Make sure you've imported 'cloudinary' at the top of your file!)
         const uploadResponse = await cloudinary.uploader.upload(dataURI, {
             folder: 'creations',
         });
 
         const secure_url = uploadResponse.secure_url;
 
-        // 4. Insert into Database
         await sql`INSERT INTO creations (user_id, prompt, content, type) 
                   VALUES (${userId}, 'Remove Background', ${secure_url}, 'image')`;
 
@@ -277,30 +272,28 @@ export const removeImageBackground = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 // Remove Imageobject
 export const removeImageObject = async (req, res) => {
     try {
-        const { userId } = req.auth; // Ensure this matches your auth logic
-        const { object } = req.body; // The word you want to remove
+        const userId = req.clerkId || req.userId || getAuth(req).userId;
+        const { object } = req.body; 
         const file = req.file;
 
         if (!file) {
             return res.status(400).json({ success: false, message: "No image uploaded" });
         }
 
-        // 1. Convert the buffer to a Base64 string
         const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 
-        // 2. Call Cloudinary using the base64 string
         const result = await cloudinary.uploader.upload(base64Image, {
-            // Using Cloudinary's Generative AI to remove the specific object
             transformation: [
                 { effect: `gen_remove:prompt_${object}` }
             ]
         });
 
-        // 3. Save to database and return
-        // ... (Your sql insert logic)
+        await sql`INSERT INTO creations (user_id, prompt, content, type) 
+                  VALUES (${userId}, ${`Remove ${object}`}, ${result.secure_url}, 'image')`;
 
         res.json({ success: true, content: result.secure_url });
 
@@ -309,27 +302,23 @@ export const removeImageObject = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 // resume review api
 export const resumeReview = async (req, res) => {
     try {
-        const { userId } = getAuth(req);
+        const userId = req.clerkId || req.userId || getAuth(req).userId;
         const resumeFile = req.file;
 
         if (!resumeFile) return res.json({ success: false, message: "No file" });
 
-        // --- RE-ADD YOUR EXTRACTION LOGIC HERE ---
         const dataBuffer = resumeFile.buffer;
         const pdfData = await pdfParser(dataBuffer);
         const extractedText = pdfData.text;
-
-        console.log("--- STARTING AI CALL ---");
-        console.log("Text Length:", extractedText?.length);
 
         if (!extractedText || extractedText.length < 10) {
             return res.json({ success: false, message: "Could not read PDF" });
         }
 
-        // --- MATCH THE ARTICLE MODULE EXACTLY ---
         const response = await AI.chat.completions.create({
             model: "gemini-2.5-flash",
             messages: [
@@ -343,12 +332,10 @@ export const resumeReview = async (req, res) => {
 
         const content = response?.choices?.[0]?.message?.content || "";
 
-        // Save to DB
-        // Make sure this matches the columns your database expects
         await sql`
-    INSERT INTO creations (user_id, prompt, content, type) 
-    VALUES (${userId}, 'Resume Review Analysis', ${content}, 'resume-review')
-`;
+            INSERT INTO creations (user_id, prompt, content, type) 
+            VALUES (${userId}, 'Resume Review Analysis', ${content}, 'resume-review')
+        `;
 
         res.json({ success: true, content });
 
