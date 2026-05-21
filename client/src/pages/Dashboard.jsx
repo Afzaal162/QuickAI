@@ -21,7 +21,7 @@ const Dashboard = () => {
     setLoading(true);
     try {
       const token = await getToken();
-        console.log("👉 COPY THIS FOR POSTMAN:", `Bearer ${tokenoken}`);
+        console.log("👉 COPY THIS FOR POSTMAN:", `Bearer ${token}`);
 
       
       if (!token) {
