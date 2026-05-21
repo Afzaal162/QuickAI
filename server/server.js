@@ -51,6 +51,8 @@ app.use((err, req, res, next) => {
 
 // Initialize database assets safely
 connectCloudinary().catch(err => console.error("Cloudinary Error:", err));
+console.log("Clerk Secret Key Exists?:", !!process.env.CLERK_SECRET_KEY);
+console.log("Clerk Publishable Key Exists?:", !!process.env.CLERK_PUBLISHABLE_KEY);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
