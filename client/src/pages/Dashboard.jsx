@@ -21,6 +21,8 @@ const Dashboard = () => {
     setLoading(true);
     try {
       const token = await getToken();
+        console.log("👉 COPY THIS FOR POSTMAN:", `Bearer ${tokenoken}`);
+
       
       if (!token) {
         console.warn("No token found yet");
