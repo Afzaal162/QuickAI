@@ -1,15 +1,30 @@
-import { neon, neonConfig } from '@neondatabase/serverless';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import ws from 'ws';
 
-// ⚡️ FIX FOR LOCALHOST FETCH FAILS: 
-// Force the Neon driver to use standard HTTP fetches natively in Node
-neonConfig.fetchConnectionCache = true;
+// ⚡️ THE CRUCIAL LOCALHOST FIX: 
+// Assign the 'ws' library to Neon's constructor so it communicates via persistent TCP WebSockets
+neonConfig.webSocketConstructor = ws;
 
-let rawConnectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
-const cleanConnectionString = String(rawConnectionString)
-  .trim()
-  .replace(/[\r\n]+/g, '') 
-  .replace(/[&?]channel_binding=[^&]+/g, '');
+if (!connectionString) {
+  console.error("❌ DATABASE ERROR: No connection string found!");
+}
 
-const sql = neon(cleanConnectionString);
+// ⚡️ Switch from raw neon() to a Pool instance for WebSocket mode
+const pool = new Pool({ 
+  connectionString: connectionString?.trim() 
+});
+
+// Create a wrapper function to keep your exact 'sql` query syntax intact 
+// so you don't have to rewrite a single line of your controllers!
+const sql = async (strings, ...values) => {
+  let queryText = strings[0];
+  for (let i = 1; i < strings.length; i++) {
+    queryText += `$${i}${strings[i]}`;
+  }
+  const result = await pool.query(queryText, values);
+  return result.rows;
+};
+
 export default sql;
