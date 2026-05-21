@@ -1,30 +1,17 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import ws from 'ws';
+import { neon } from '@neondatabase/serverless';
 
-// ⚡️ THE CRUCIAL LOCALHOST FIX: 
-// Assign the 'ws' library to Neon's constructor so it communicates via persistent TCP WebSockets
-neonConfig.webSocketConstructor = ws;
+let rawConnectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
-const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-
-if (!connectionString) {
-  console.error("❌ DATABASE ERROR: No connection string found!");
+if (!rawConnectionString) {
+  console.error("❌ DATABASE ERROR: Missing connection string configuration setup!");
 }
 
-// ⚡️ Switch from raw neon() to a Pool instance for WebSocket mode
-const pool = new Pool({ 
-  connectionString: connectionString?.trim() 
-});
+// Ensure the connection string points directly to the main endpoint instead of the pooled instance
+const cleanConnectionString = String(rawConnectionString)
+  .trim()
+  .replace(/[\r\n]+/g, '')
+  .replace('-pooler', ''); // Double protection: forcibly strips the pooler flag if present
 
-// Create a wrapper function to keep your exact 'sql` query syntax intact 
-// so you don't have to rewrite a single line of your controllers!
-const sql = async (strings, ...values) => {
-  let queryText = strings[0];
-  for (let i = 1; i < strings.length; i++) {
-    queryText += `$${i}${strings[i]}`;
-  }
-  const result = await pool.query(queryText, values);
-  return result.rows;
-};
+const sql = neon(cleanConnectionString);
 
 export default sql;
