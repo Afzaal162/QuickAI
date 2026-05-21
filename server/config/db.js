@@ -1,19 +1,20 @@
 import { neon } from '@neondatabase/serverless';
 
-// 1. Snag your environment string safely from your deployment profile
-let connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+// 1. Fetch your string from either environment slot safely
+let rawConnectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
-if (connectionString) {
-  // ⚡️ THE FIX: Strip off any advanced TCP-only flags that break the stateless Fetch API wrapper
-  if (connectionString.includes('channel_binding=')) {
-    // This splits at the parameter or safely strips it out completely
-    connectionString = connectionString.replace(/[&?]channel_binding=[^&]+/g, '');
-  }
-} else {
-  console.error("❌ DATABASE ERROR: No connection string found!");
+if (!rawConnectionString) {
+  console.error("❌ DATABASE ERROR: No connection string found inside environment variables!");
 }
 
-// 2. Initialize your HTTP client driver with a clean, fetch-safe database URL
-const sql = neon(connectionString);
+// 2. Clear any hidden structural formatting or whitespace anomalies
+// .trim() removes hidden spaces/newlines, .replace removes advanced TCP-only flags
+const cleanConnectionString = String(rawConnectionString)
+  .trim()
+  .replace(/[\r\n]+/g, '') 
+  .replace(/[&?]channel_binding=[^&]+/g, '');
+
+// 3. Initialize your clean SQL query client
+const sql = neon(cleanConnectionString);
 
 export default sql;
