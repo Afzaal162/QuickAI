@@ -13,7 +13,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // Text Generation Routes
-aiRouter.post('/generate-article', auth, generateArticle);
+aiRouter.post('/generate-article', generateArticle);
 aiRouter.post('/generate-blog-title', auth, generateBlogTitle);
 aiRouter.post('/generate-image', auth, generateImage);
 
