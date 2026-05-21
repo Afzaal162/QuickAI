@@ -74,11 +74,16 @@ export const generateArticle = async (req, res) => {
             }
         });
 
+    // ... your main controller logic above
+
     } catch (error) {
-        console.log("ERROR:", error.message);
+        // ⚡️ CHANGE THIS LINE: Print the full error object directly 
+        // to see the exact file line number that is failing!
+        console.log("❌ DETAILED BACKEND CRASH LOG:", error);
+        
         res.json({
             success: false,
-            message: error.message
+            message: error.message || "An unexpected controller reference error occurred."
         });
     }
 };
