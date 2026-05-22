@@ -13,11 +13,16 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // Text Generation Routes
-aiRouter.post('/generate-article', auth, generateArticle);
+// aiRouter.post('/generate-article', auth, generateArticle);
 aiRouter.post('/generate-blog-title', auth, generateBlogTitle);
 aiRouter.post('/generate-image', auth, generateImage);
 
-
+// Add this temporarily right next to your POST route inside routes/aiRoutes.js
+aiRouter.get('/generate-article', (req, res) => {
+    res.json({ 
+        message: "The route works! Use Postman or a frontend form to send a POST request with your article parameters." 
+    });
+});
 // ⚡️ FIXED: Move 'auth' BEFORE 'upload.single' so the user is authenticated first!
 aiRouter.post('/remove-image-background', auth, upload.single('image'), removeImageBackground);
 aiRouter.post('/remove-image-object', auth, upload.single('image'), removeImageObject);
