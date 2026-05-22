@@ -9,7 +9,7 @@ import connectCloudinary from './config/cloudinary.js';
 const app = express();
 
 const allowedOrigins = [
-    'https://quick-ai-client-sage.vercel.app', 
+    'https://quick-ai-client-opal.vercel.app', 
     'http://localhost:5173'
 ];
 
