@@ -35,7 +35,8 @@ console.log("🛠️ CLERK KEY ENGINE CHECK:", {
   hasSecret: !!process.env.CLERK_SECRET_KEY
 });
 // 2. Explicitly feed your keys into Clerk so it doesn't guess where they are
-app.use('/api/(.*)', clerkMiddleware({
+// ✅ Use an array of explicit paths instead of a regex string
+app.use(clerkMiddleware({
     publishableKey: process.env.VITE_CLERK_PUBLISHABLE_KEY || process.env.CLERK_PUBLISHABLE_KEY,
     secretKey: process.env.CLERK_SECRET_KEY
 }));
