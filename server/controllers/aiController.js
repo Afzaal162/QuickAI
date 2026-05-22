@@ -59,12 +59,21 @@ export const generateArticle = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ DETAILED BACKEND CRASH LOG:", error.message);
-    return res.json({ 
-      success: false, 
-      message: error.message || "Internal Server Error Connection Crash" 
-    });
-  }
+        console.error("AI Generation Error Details:", error);
+
+        // Capture upstream API rate limits or quota failures explicitly
+        if (error.status === 429 || error.statusCode === 429) {
+            return res.status(429).json({
+                success: false,
+                message: "Your AI API key has hit its rate limit or your balance has run out. Check your AI provider billing panel."
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Internal Server Error during article generation"
+        });
+    }
 };
 // API TO GENERATE BLOG TITLE
 export const generateBlogTitle = async (req, res) => {
