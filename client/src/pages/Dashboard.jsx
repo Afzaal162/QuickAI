@@ -6,7 +6,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 // This tells the browser: Use the Vercel variable, but if it's missing, use the live server link!
-axios.defaults.baseURL = import.meta.env.VITE_BASE_URL || 'https://quick-ai-server-7fzzdc43e-afzaal-hassans-projects.vercel.app';
+axios.defaults.baseURL = import.meta.env.VITE_BASE_URL
 const Dashboard = () => {
   const [creations, setCreations] = useState([]);
   const [loading, setLoading] = useState(true);

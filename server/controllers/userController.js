@@ -1,22 +1,41 @@
 import sql from '../config/db.js'
-
-// Example check for your getUserCreation controller function inside userController.js:
-// Verification template for controllers/userController.js
 export const getUserCreation = async (req, res) => {
     try {
-        const clerkId = req.clerkId; 
-        console.log("Fetching creations for authenticated user ID:", clerkId);
+        // 1. Cleanly pull the verified Clerk user ID from the request object
+        const rawUserId = req.auth?.userId || req.clerkId || req.userId;
 
-        // Your database logic goes here...
-        // const creations = await YourModel.find({ userId: clerkId });
-        
+        if (!rawUserId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized: Missing authentication context."
+            });
+        }
+
+        const userId = String(rawUserId).trim();
+
+        // 2. Fetch recent historical generations from your Neon/PostgreSQL database
+        // Adjust column and table names based on your exact schema definitions
+        const creations = await sql`
+            SELECT id, user_id, prompt, type, created_at 
+            FROM creations
+            WHERE user_id = ${userId}
+            ORDER BY created_at DESC
+        `;
+
+        // 3. Return the array cleanly. Ensure the property matches the key 
+        // your frontend loops over: data.creations
         return res.status(200).json({
             success: true,
-            creations: [] 
+            creations: creations || []
         });
+
     } catch (error) {
-        console.error("getUserCreation Error:", error);
-        return res.status(500).json({ success: false, message: error.message });
+        console.error("❌ USER DASHBOARD CONTROLLER ERROR:", error);
+        
+        return res.status(500).json({
+            success: false,
+            error: error.message || "Internal Server Error during creation lookup."
+        });
     }
 };
 export const getPublishedCreation = async (req, res) => {

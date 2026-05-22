@@ -1,7 +1,7 @@
+import 'dotenv/config'; 
 import express from 'express';
 import cors from 'cors';
-import 'dotenv/config';
-import { clerkMiddleware } from '@clerk/express'; // Make sure this is installed via npm install @clerk/express
+import { clerkMiddleware } from '@clerk/express'; 
 import aiRouter from './routes/aiRoutes.js';
 import userRouter from './routes/userRoute.js';
 import connectCloudinary from './config/cloudinary.js';
@@ -14,31 +14,31 @@ const allowedOrigins = [
     'http://localhost:5173'
 ];
 
-// 1. Clear out the callback functions and explicitly target your live client app
 app.use(cors({
-    origin: 'https://quick-ai-client-sage.vercel.app',
+    origin: function (origin, callback) {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
-// 2. Add an explicit manual catcher for OPTIONS requests to guarantee a 200 OK response
-app.options('*', (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', 'https://quick-ai-client-sage.vercel.app');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
-    return res.sendStatus(200);
-});
-
 app.use(express.json());
-
+console.log("🛠️ CLERK KEY ENGINE CHECK:", {
+  hasPublishable: !!process.env.CLERK_PUBLISHABLE_KEY,
+  hasVitePublishable: !!process.env.VITE_CLERK_PUBLISHABLE_KEY,
+  hasSecret: !!process.env.CLERK_SECRET_KEY
+});
 // 2. Explicitly feed your keys into Clerk so it doesn't guess where they are
-app.use(clerkMiddleware({
-    publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+app.use('/api/(.*)', clerkMiddleware({
+    publishableKey: process.env.VITE_CLERK_PUBLISHABLE_KEY || process.env.CLERK_PUBLISHABLE_KEY,
     secretKey: process.env.CLERK_SECRET_KEY
 }));
-
 // 3. System Routes
 app.get('/', (req, res) => res.send('Server is Live'));
 app.use('/api/ai', aiRouter);
