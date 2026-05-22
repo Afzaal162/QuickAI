@@ -8,32 +8,32 @@ import connectCloudinary from './config/cloudinary.js';
 
 const app = express();
 
-const allowedOrigins = [
-    'https://quick-ai-client-opal.vercel.app', 
-    'http://localhost:5173'
-];
+// 🔥 CRITICAL: Direct native override to eliminate preflight blocks before middleware evaluations
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    
+    // Check if the request origin matches your client domains or any Vercel deployment
+    if (origin && (origin === 'https://quick-ai-client-sage.vercel.app' || origin === 'http://localhost:5173' || origin.endsWith('.vercel.app'))) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, clerk-db-jwt');
 
-// 1. Core CORS Setup with Preflight Handling
-app.use(cors({
-    origin: function (origin, callback) {
-        // Allow Postman or Server-to-Server requests (origin is undefined)
-        if (!origin) return callback(null, true);
-        
-        // Dynamically accept explicitly whitelisted origins OR any Vercel deployment
-        if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'clerk-db-jwt'],
-    preflightContinue: false, // 🔥 Intercept and terminate OPTIONS checks instantly
-    optionsSuccessStatus: 204  // Send a clean 204 status back to browser handshakes
-}));
+    // If it's a preflight OPTIONS handshake, cut the chain immediately and return a clean 204
+    if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+    }
+    
+    next();
+});
+
+// Remove your old app.use(cors(...)) setup block completely now!
 
 app.use(express.json());
+
+// Remainder of your application script...
 
 console.log("🛠️ CLERK KEY ENGINE CHECK:", {
   hasPublishable: !!process.env.CLERK_PUBLISHABLE_KEY,
