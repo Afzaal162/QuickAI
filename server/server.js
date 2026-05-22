@@ -14,20 +14,22 @@ const allowedOrigins = [
     'http://localhost:5173'
 ];
 
+// 1. Clear out the callback functions and explicitly target your live client app
 app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: 'https://quick-ai-client-sage.vercel.app',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-    optionsSuccessStatus: 200 // 👈 Add this line to handle legacy browser preflight responses safely
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
+
+// 2. Add an explicit manual catcher for OPTIONS requests to guarantee a 200 OK response
+app.options('*', (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', 'https://quick-ai-client-sage.vercel.app');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+    return res.sendStatus(200);
+});
 
 app.use(express.json());
 
