@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 
 // This tells the browser: Use the Vercel variable, but if it's missing, use the live server link!
 axios.defaults.baseURL = import.meta.env.VITE_BASE_URL
+
 const Dashboard = () => {
   const [creations, setCreations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,14 +54,14 @@ const Dashboard = () => {
     }
   }, [isLoaded, isSignedIn]);
 
-  // Show a global loader if Clerk itself hasn't resolved the active user context yet
-  if (!isLoaded) {
-    return (
-      <div className="h-full w-full flex items-center justify-center bg-gray-50/50">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
+  // // Show a global loader if Clerk itself hasn't resolved the active user context yet
+  // if (!isLoaded) {
+  //   return (
+  //     <div className="h-full w-full flex items-center justify-center bg-gray-50/50">
+  //       <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className='h-full w-full overflow-y-scroll p-6 bg-gray-50/50'>
