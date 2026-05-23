@@ -2,6 +2,9 @@ import { getAuth } from '@clerk/express';
 import jwt from 'jsonwebtoken';
 
 export const auth = async (req, res, next) => {
+    // ✅ Always let preflight OPTIONS pass through immediately
+    if (req.method === 'OPTIONS') return next();
+    
     try {
         let userId = null;
 
