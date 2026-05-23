@@ -13,6 +13,18 @@ const allowedOrigins = [
 ];
 
 // ✅ STEP 1: CORS must be the VERY first middleware — before everything including body parser
+// Add this BEFORE your CORS middleware to log every request
+app.use((req, res, next) => {
+    console.log(`[REQUEST] ${req.method} ${req.path} | Origin: ${req.headers.origin}`);
+    
+    // Log response headers after they're sent
+    const originalEnd = res.end;
+    res.end = function(...args) {
+        console.log(`[RESPONSE] ${req.method} ${req.path} | Status: ${res.statusCode} | CORS Header: ${res.getHeader('Access-Control-Allow-Origin')}`);
+        originalEnd.apply(this, args);
+    };
+    next();
+});
 app.use((req, res, next) => {
     const origin = req.headers.origin;
 
