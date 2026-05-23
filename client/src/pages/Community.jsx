@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useUser, useAuth } from "@clerk/clerk-react";
 import { Heart } from 'lucide-react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
-
-axios.defaults.baseURL = import.meta.VITE_BASE_URL;
+import axios from '../lib/axiosInstance';
 
 const Community = () => {
   const [creations, setCreations] = useState([]);

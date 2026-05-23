@@ -3,8 +3,7 @@ import React from 'react';
 import { Image, Sparkle } from 'lucide-react'
 import toast from 'react-hot-toast';
 import { useAuth } from '@clerk/clerk-react';
-import axios from 'axios'
-axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
+import axios from '../lib/axiosInstance';
 const GenerateImages = () => {
   const ImageStyle = ['Realistic', 'Ghibli style', "Anime style", 'Cartoon style', "Fantasy style",
     "Realistic style", "3D style", "Portrait style"]

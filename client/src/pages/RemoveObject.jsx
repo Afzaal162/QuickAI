@@ -1,9 +1,8 @@
 import React, { useState } from 'react'
 import { Sparkle, Scissors } from 'lucide-react';
-import axios from 'axios'
+import axios from '../lib/axiosInstance';
 import { useAuth } from '@clerk/clerk-react';
 import toast from 'react-hot-toast';
-axios.defaults.baseURL = import.meta.VITE_BASE_URL;
 
 
 const RemoveObject = () => {

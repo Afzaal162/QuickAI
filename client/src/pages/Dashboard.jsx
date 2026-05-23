@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useAuth, Protect } from '@clerk/clerk-react';
 import { Gem, Sparkles, Loader2 } from 'lucide-react';
 import CreationItem from '../components/CreationItem';
-import axios from 'axios';
 import toast from 'react-hot-toast';
+import axios from '../lib/axiosInstance';
+
 
 // This tells the browser: Use the Vercel variable, but if it's missing, use the live server link!
 // To this temporarily:
-axios.defaults.baseURL = 'https://quick-ai-server-omega-neon.vercel.app';
 
 console.log("🔗 Calling:", axios.default)
 const Dashboard = () => {

@@ -2,10 +2,7 @@ import React, { useState } from 'react'
 import { Sparkle, Eraser } from 'lucide-react'
 import toast from 'react-hot-toast';
 import { useAuth } from '@clerk/clerk-react';
-import axios from 'axios'
-
-// Ensure your .env variable is named correctly
-axios.defaults.baseURL = import.meta.env.VITE_BASE_URL; 
+import axios from '../lib/axiosInstance';
 
 const RemoveBackground = () => {
   // 1. Move all hooks to the top level
@@ -40,7 +37,7 @@ const onSubmitHandler = async (e) => {
     const formData = new FormData();
     formData.append('image', input);
 
-    const { data } = await axios.post('http://localhost:3000/api/ai/remove-image-background', formData, {
+    const { data } = await axios.post('/api/ai/remove-image-background', formData, {
         headers: { Authorization: `Bearer ${await getToken()}` }
       })
 

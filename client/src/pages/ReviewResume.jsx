@@ -3,9 +3,8 @@ import { Sparkle, File, FileText } from 'lucide-react'
 import { useAuth } from '@clerk/clerk-react';
 import Markdown from 'react-markdown'
 import toast from 'react-hot-toast';
-import axios from 'axios';
+import axios from '../lib/axiosInstance';
 
-axios.defaults.baseURL = import.meta.VITE_BASE_URL;
 
 
 const ReviewResume = () => {

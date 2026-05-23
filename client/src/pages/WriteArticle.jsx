@@ -1,15 +1,12 @@
 import React, { useState } from 'react'
 import { Edit, Sparkles } from 'lucide-react'
 import { useAuth } from '@clerk/clerk-react';
-import axios from 'axios'
+import axios from '../lib/axiosInstance';
 import toast from 'react-hot-toast';
 import Markdown from 'react-markdown'
-// 🔥 DYNAMIC ENVIROMENT LOOKUP:
-// If building for production, force the direct Vercel URL. Otherwise, use empty string to let the Vite local proxy do its job.
-// 🛠️ Updated to point explicitly to your live neon production backend url
-axios.defaults.baseURL = import.meta.env.MODE === 'production' 
-  ? 'https://quick-ai-server-omega-neon.vercel.app' 
-  : '';
+// axios.defaults.baseURL = import.meta.env.MODE === 'production' 
+//   ? 'https://quick-ai-server-omega-neon.vercel.app' 
+//   : '';
   const WriteArticle = () => {
   const articleLength = [
     { length: 800, text: 'Short(500-800 Words)' },

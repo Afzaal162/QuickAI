@@ -4,10 +4,7 @@ import React from 'react'
 import { useAuth } from '@clerk/clerk-react';
 import toast from 'react-hot-toast';
 import Markdown from 'react-markdown'
-import axios from 'axios';
-
-// ⚡️ FIXED: Added '.env' so Vite reads your backend URL correctly
-axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
+import axios from '../lib/axiosInstance'
 
 const BlogTitles = () => {
   const blogCategories = ['General', "Technology", "Business", "Health", "LifeStyle", "Education", "Travel", "Food"]
