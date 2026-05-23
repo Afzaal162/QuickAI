@@ -66,7 +66,7 @@ app.use((err, req, res, next) => {
 connectCloudinary().catch(err => console.error("Cloudinary Error:", err));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 // ✅ Only listen when running locally, not on Vercel
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
