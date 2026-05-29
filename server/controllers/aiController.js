@@ -239,19 +239,53 @@ export const removeImageBackground = async (req, res) => {
         const base64Image = Buffer.from(req.file.buffer).toString('base64');
         const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
 
-        // --- UPDATED: Added background removal transformation flags ---
+        // Step 1: Upload original image
         const uploadResponse = await cloudinary.uploader.upload(dataURI, {
             folder: 'creations',
-            background_removal: "cloudinary_ai", // Instructs Cloudinary to strip the background
-            format: 'png' // Forces the output image to be a PNG so transparency works!
+            format: 'png'
         });
 
-        const secure_url = uploadResponse.secure_url;
+        const publicId = uploadResponse.public_id;
+
+        // Step 2: Trigger background removal and poll
+        await cloudinary.uploader.explicit(publicId, {
+            type: 'upload',
+            background_removal: 'cloudinary_ai',
+        });
+
+        // Step 3: Poll until done
+        let finalUrl = null;
+        for (let i = 0; i < 15; i++) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            const result = await cloudinary.api.resource(publicId, { format: 'png' });
+            const status = result.info?.background_removal?.cloudinary_ai?.status;
+
+            console.log(`Attempt ${i + 1}: status = ${status}`); // helpful for debugging
+
+            if (status === 'complete') {
+                // ✅ Build a fresh delivery URL with cache-busting transformation
+                finalUrl = cloudinary.url(publicId, {
+                    format: 'png',
+                    version: result.version, // version forces CDN to serve the latest asset
+                    sign_url: true,
+                });
+                break;
+            }
+
+            if (status === 'failed') {
+                return res.status(500).json({ success: false, message: "Background removal failed on Cloudinary's end" });
+            }
+        }
+
+        if (!finalUrl) {
+            return res.status(500).json({ success: false, message: "Background removal timed out" });
+        }
 
         await sql`INSERT INTO creations (user_id, prompt, content, type) 
-                  VALUES (${userId}, 'Remove Background', ${secure_url}, 'image')`;
+                  VALUES (${userId}, 'Remove Background', ${finalUrl}, 'image')`;
 
-        res.json({ success: true, content: secure_url });
+        res.json({ success: true, content: finalUrl });
 
     } catch (error) {
         console.error("BG REMOVAL ERROR:", error);
@@ -305,16 +339,22 @@ export const resumeReview = async (req, res) => {
             return res.json({ success: false, message: "Could not read PDF" });
         }
 
-        const response = await AI.chat.completions.create({
-            model: "gemini-2.5-flash",
-            messages: [
-                {
-                    role: "user",
-                    content: `Review this resume and provide feedback: ${extractedText}`
-                }
-            ],
-            temperature: 0.7,
-        });
+      const response = await AI.chat.completions.create({
+    model: "gemini-2.5-flash",
+    messages: [
+        {
+            role: "system",
+            content: `You are an expert resume reviewer. Today's date is ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}. 
+Review resumes based on current ${new Date().getFullYear()} standards. 
+Never question or correct dates, years, or experiences mentioned in the resume — take all information at face value.`
+        },
+        {
+            role: "user",
+            content: `Review this resume and provide detailed feedback:\n\n${extractedText}`
+        }
+    ],
+    temperature: 0.7,
+});
 
         const content = response?.choices?.[0]?.message?.content || "";
 
