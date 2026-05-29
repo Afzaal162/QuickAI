@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, Edit, Hash } from 'lucide-react';
+import { Sparkles, Edit, Hash, Copy, Check } from 'lucide-react';
 import React from 'react'
 import { useAuth } from '@clerk/clerk-react';
 import toast from 'react-hot-toast';
@@ -10,6 +10,7 @@ const BlogTitles = () => {
   const blogCategories = ['General', "Technology", "Business", "Health", "LifeStyle", "Education", "Travel", "Food"]
   const [selectedCategory, setSelectedCategory] = useState('General');
   const [input, setInput] = useState("");
+  const [copied, setCopied] = useState(false); // New state for copy feedback
   const [loading, setLoading] = useState(false); // ⚡️ Cleaner: Initialize as boolean false
   const [content, setContent] = useState("");
   const { getToken } = useAuth();
@@ -38,6 +39,22 @@ Just the titles.`;
     }
     setLoading(false)
   }
+   // Function to handle clipboard copying
+    const handleCopy = async () => {
+      if (!content) return;
+      try {
+        await navigator.clipboard.writeText(content);
+        setCopied(true);
+        toast.success("Copied to clipboard!");
+        
+        // Reset visual feedback after 2 seconds
+        setTimeout(() => {
+          setCopied(false);
+        }, 2000);
+      } catch (err) {
+        toast.error("Failed to copy text");
+      }
+    };
 
   return (
     <div className='h-full w-full overflow-y-scroll p-6 flex items-start flex-wrap gap-4 text-slate-700'>
@@ -76,6 +93,25 @@ Just the titles.`;
           <Hash className='w-5 h-5 text-[#8E37EB]' />
           <h1 className="text-xl font-semibold"> Generated Article</h1>
         </div>
+         {/* Action Button: Visible only when content exists */}
+                  {content && (
+                    <button
+                      onClick={handleCopy}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 hover:text-gray-900 transition-all duration-200 cursor-pointer"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-green-500" />
+                          <span className="text-green-600">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy Content</span>
+                        </>
+                      )}
+                    </button>
+                  )}
         {!content ? (
           <div className="flex-1 flex justify-center items-center">
             <p className="text-gray-400">Enter a Topic and Click "Generate Title"</p>

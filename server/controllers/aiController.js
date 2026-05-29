@@ -239,8 +239,11 @@ export const removeImageBackground = async (req, res) => {
         const base64Image = Buffer.from(req.file.buffer).toString('base64');
         const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
 
+        // --- UPDATED: Added background removal transformation flags ---
         const uploadResponse = await cloudinary.uploader.upload(dataURI, {
             folder: 'creations',
+            background_removal: "cloudinary_ai", // Instructs Cloudinary to strip the background
+            format: 'png' // Forces the output image to be a PNG so transparency works!
         });
 
         const secure_url = uploadResponse.secure_url;
